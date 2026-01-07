@@ -289,3 +289,149 @@ async def train_new_disease(
         "images_added": saved_count,
         "total_classes": len(ml_service.class_names)
     }
+    return {
+        "message": f"Successfully trained new disease: {safe_name}",
+        "images_added": saved_count,
+        "total_classes": len(ml_service.class_names)
+    }
+
+
+class ReportResponse(BaseModel):
+    id: int
+    prediction_id: int
+    user_id: int
+    status: str
+    proposed_label: Optional[str]
+    description: Optional[str]
+    image_url: str
+    created_at: str
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/reports", response_model=List[ReportResponse])
+def get_pending_reports(
+    current_user: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Get all pending reported cases"""
+    from backend.models import ReportedCase
+    
+    reports = db.query(ReportedCase).filter(
+        ReportedCase.status == "PENDING"
+    ).order_by(ReportedCase.created_at.desc()).all()
+    
+    # Enrich with image URL (relative path for frontend)
+    results = []
+    for r in reports:
+        # Construct image URL from prediction
+        image_url = f"/api/v1/diagnosis/image/{r.prediction_id}"
+        results.append({
+            "id": r.id,
+            "prediction_id": r.prediction_id,
+            "user_id": r.user_id,
+            "status": r.status,
+            "proposed_label": r.proposed_label,
+            "description": r.description,
+            "image_url": image_url,
+            "created_at": r.created_at.isoformat() if r.created_at else None
+        })
+        
+    return results
+
+
+class ApproveReportRequest(BaseModel):
+    correct_label: str
+    admin_notes: Optional[str] = None
+
+
+@router.post("/reports/{report_id}/approve")
+def approve_report(
+    report_id: int,
+    approval: ApproveReportRequest,
+    current_user: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Approve a report:
+    1. Move image to few-shot training set (under correct_label)
+    2. Retrain model (update prototypes)
+    3. Update report status
+    """
+    import os
+    import shutil
+    from backend.config import settings
+    from backend.models import ReportedCase
+    from backend.ml_service import ml_service
+    
+    report = db.query(ReportedCase).filter(ReportedCase.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+        
+    if report.status != "PENDING":
+        raise HTTPException(status_code=400, detail="Report is not pending")
+        
+    # Get original image path
+    if not report.prediction or not os.path.exists(report.prediction.image_path):
+        raise HTTPException(status_code=404, detail="Original image file not found")
+        
+    source_path = report.prediction.image_path
+    
+    # Prepare destination
+    safe_label = "".join(c for c in approval.correct_label if c.isalnum() or c in (' ', '_', '-')).strip()
+    dest_dir = os.path.join(settings.TRAIN_DATA_DIR, safe_label)
+    os.makedirs(dest_dir, exist_ok=True)
+    
+    # We copy instead of move to keep the prediction record valid
+    filename = os.path.basename(source_path)
+    dest_path = os.path.join(dest_dir, filename)
+    
+    try:
+        shutil.copy2(source_path, dest_path)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to copy image: {str(e)}")
+        
+    # Update Status
+    report.status = "APPROVED"
+    report.admin_notes = approval.admin_notes
+    
+    # Use the approved label as the proposed label if not provided previously, or just for record
+    if not report.proposed_label:
+        report.proposed_label = safe_label
+        
+    db.commit()
+    
+    # Trigger Retraining
+    try:
+        ml_service.retrain_model()
+    except Exception as e:
+        # Note: We don't rollback DB here because the manual work was done, 
+        # but we warn the admin.
+        return {
+            "message": "Report approved and image saved, BUT model update failed.",
+            "error": str(e)
+        }
+        
+    return {"message": f"Report approved. Image added to '{safe_label}' and model updated."}
+
+
+@router.post("/reports/{report_id}/reject")
+def reject_report(
+    report_id: int,
+    admin_notes: Optional[str] = Form(None),
+    current_user: User = Depends(get_current_admin_user),
+    db: Session = Depends(get_db)
+):
+    """Reject a report"""
+    from backend.models import ReportedCase
+    
+    report = db.query(ReportedCase).filter(ReportedCase.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+        
+    report.status = "REJECTED"
+    report.admin_notes = admin_notes
+    db.commit()
+    
+    return {"message": "Report rejected."}

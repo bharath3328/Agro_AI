@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, AlertTriangle, CheckCircle, Image as ImageIcon, Calendar, MapPin, FileText, Layers } from 'lucide-react'
+import { ArrowLeft, AlertTriangle, CheckCircle, Image as ImageIcon, Calendar, MapPin, FileText, Layers, Flag } from 'lucide-react'
 import api from '../services/api'
 import toast from 'react-hot-toast'
 import AIAdvisoryCard from '../components/AIAdvisoryCard'
+import ReportModal from '../components/ReportModal'
 
 export default function PredictionDetail() {
   const { id } = useParams()
@@ -11,6 +12,7 @@ export default function PredictionDetail() {
   const [loading, setLoading] = useState(true)
   const [gradcamUrl, setGradcamUrl] = useState(null)
   const [imageUrl, setImageUrl] = useState(null)
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false)
 
   useEffect(() => {
     fetchPrediction()
@@ -205,9 +207,16 @@ export default function PredictionDetail() {
               <div className="text-center py-4">
                 <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-3" />
                 <h3 className="text-xl font-bold text-yellow-700 dark:text-yellow-400 mb-2">Unknown Disease</h3>
-                <p className="text-yellow-600 dark:text-yellow-300/80 text-sm">
+                <p className="text-yellow-600 dark:text-yellow-300/80 text-sm mb-4">
                   Our confidence score was too low to verify the disease. Please consult an expert.
                 </p>
+                <button
+                  onClick={() => setIsReportModalOpen(true)}
+                  className="w-full py-2 px-4 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 rounded-lg font-medium flex items-center justify-center gap-2 border border-yellow-200 transition-colors"
+                >
+                  <Flag className="w-4 h-4" />
+                  Report to Research Team
+                </button>
               </div>
             ) : (
               <div className="space-y-6">
@@ -251,6 +260,17 @@ export default function PredictionDetail() {
                     </p>
                   </div>
                 )}
+
+                {/* Option to report incorrect diagnosis even if known */}
+                <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
+                  <button
+                    onClick={() => setIsReportModalOpen(true)}
+                    className="text-xs text-gray-500 hover:text-red-600 flex items-center gap-1 mx-auto transition-colors"
+                  >
+                    <Flag className="w-3 h-3" />
+                    Report Incorrect Diagnosis
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -283,6 +303,13 @@ export default function PredictionDetail() {
           )}
         </div>
       </div>
+
+      {isReportModalOpen && (
+        <ReportModal
+          predictionId={id}
+          onClose={() => setIsReportModalOpen(false)}
+        />
+      )}
     </div>
   )
 }

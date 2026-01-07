@@ -376,4 +376,59 @@ def get_uploaded_image(
             detail="Image not available"
         )
     
+    
     return FileResponse(prediction.image_path, media_type="image/jpeg")
+
+
+class ReportRequest(BaseModel):
+    prediction_id: int
+    proposed_label: Optional[str] = None
+    description: Optional[str] = None
+
+
+@router.post("/report", status_code=status.HTTP_201_CREATED)
+def report_unknown_case(
+    report: ReportRequest,
+    current_user = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Report an incorrect or unknown prediction to admin.
+    """
+    # 1. Verify prediction exists and belongs to user
+    prediction = db.query(Prediction).filter(
+        Prediction.id == report.prediction_id,
+        Prediction.user_id == current_user.id
+    ).first()
+    
+    if not prediction:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Prediction not found or access denied"
+        )
+        
+    # 2. Check if already reported
+    from backend.models import ReportedCase
+    existing = db.query(ReportedCase).filter(
+        ReportedCase.prediction_id == report.prediction_id
+    ).first()
+    
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This prediction has already been reported"
+        )
+        
+    # 3. Create Report
+    new_report = ReportedCase(
+        prediction_id=prediction.id,
+        user_id=current_user.id,
+        proposed_label=report.proposed_label,
+        description=report.description,
+        status="PENDING"
+    )
+    
+    db.add(new_report)
+    db.commit()
+    
+    return {"message": "Report submitted successfully. An expert will review it soon."}

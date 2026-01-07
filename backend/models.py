@@ -100,3 +100,29 @@ class DiseaseHistory(Base):
     first_detected = Column(DateTime(timezone=True))
     last_detected = Column(DateTime(timezone=True))
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class ReportedCase(Base):
+    """Cases reported by users for unknown diseases"""
+    __tablename__ = "reported_cases"
+
+    id = Column(Integer, primary_key=True, index=True)
+    prediction_id = Column(Integer, ForeignKey("predictions.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    # Status: PENDING, APPROVED, REJECTED
+    status = Column(String(20), default="PENDING", index=True)
+    
+    # User input
+    proposed_label = Column(String(255))
+    description = Column(Text)
+    
+    # Admin feedback
+    admin_notes = Column(Text)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    prediction = relationship("Prediction")
+    user = relationship("User")
