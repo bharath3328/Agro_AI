@@ -23,11 +23,11 @@ from backend.models import Prediction, DiseaseHistory
 from backend.auth_utils import get_current_active_user
 from backend.ml_service import ml_service
 from backend.config import settings
-from ml.explainability.gradcam import GradCAM
-from ml.encoder.encoder import Encoder
-from ml.utils.transforms import inference_transform
-from ml.intelligence.agro_intelligence import assess_disease_intelligence
-from ml.reasoning.api_reasoner import generate_ai_advisory
+from ml.gradcam import GradCAM
+from ml.encoder import Encoder
+from ml.transforms import inference_transform
+from ml.agro_intelligence import assess_disease_intelligence
+from ml.api_reasoner import generate_ai_advisory
 
 router = APIRouter(prefix="/diagnosis", tags=["Disease Diagnosis"])
 

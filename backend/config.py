@@ -16,7 +16,7 @@ class Settings:
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
     
     # ML Model Paths
-    ENCODER_PATH: str = os.getenv("ENCODER_PATH", "ml/encoder/encoder_supcon.pth")
+    ENCODER_PATH: str = os.getenv("ENCODER_PATH", "ml/encoder_supcon.pth")
     TRAIN_DATA_DIR: str = os.getenv("TRAIN_DATA_DIR", "data/fewshot/train")
     OPEN_SET_THRESHOLD: Optional[float] = None
     
