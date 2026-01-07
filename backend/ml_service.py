@@ -1,6 +1,3 @@
-"""
-ML Service Layer - Initializes and manages ML models
-"""
 import torch
 import os
 from typing import Dict, Tuple
@@ -10,10 +7,7 @@ from ml.fewshot.prototypes import compute_prototypes
 from ml.open_set.threshold import compute_open_set_threshold
 from backend.config import settings
 
-
 class MLService:
-    """Singleton service for ML model management"""
-    
     _instance = None
     _initialized = False
     
@@ -36,7 +30,6 @@ class MLService:
             self._initialized = True
     
     def initialize(self):
-        """Initialize ML models and prototypes"""
         if self.classifier is not None:
             print("ML models already initialized")
             return
@@ -54,21 +47,17 @@ class MLService:
         
         # Compute open-set threshold
         print("Computing open-set threshold...")
-        # Fine-tuning made clusters very tight, so we must lower the percentile 
-        # to avoid rejecting valid unseen data. Setting to 0.5 (virtually minimum)
         self.threshold = compute_open_set_threshold(
             encoder_path, train_dir, self.device, percentile=0.5
         )
         print(f"Open-set threshold: {self.threshold:.3f}")
         
-        # Compute prototypes
         print("Computing prototypes...")
         self.prototypes, self.class_names = compute_prototypes(
             encoder_path, train_dir, self.device
         )
         print(f"Loaded {len(self.class_names)} disease classes")
         
-        # Initialize classifier
         print("Initializing classifier...")
         self.classifier = PrototypeClassifier(
             encoder_path, self.prototypes, self.class_names, self.device
@@ -77,38 +66,28 @@ class MLService:
         print("ML models initialized successfully!")
     
     def get_classifier(self) -> PrototypeClassifier:
-        """Get the classifier instance"""
         if self.classifier is None:
             self.initialize()
         return self.classifier
     
     def get_threshold(self) -> float:
-        """Get the open-set threshold"""
         if self.threshold is None:
             self.initialize()
         return self.threshold
 
     def retrain_model(self):
-        """Force re-training of the model (re-compute prototypes)"""
-        print("🔄 Retraining model with new data...")
-        self.classifier = None  # Reset classifier
-        
-        # Re-run initialization (will re-scan the directories)
+        print("Retraining model with new data...")
+        self.classifier = None
         encoder_path = settings.ENCODER_PATH
         train_dir = settings.TRAIN_DATA_DIR
-        
-        # Re-compute prototypes
         self.prototypes, self.class_names = compute_prototypes(
             encoder_path, train_dir, self.device
         )
-        print(f"✅ Reloaded {len(self.class_names)} disease classes")
+        print(f"Reloaded {len(self.class_names)} disease classes")
         
-        # Re-initialize classifier
         self.classifier = PrototypeClassifier(
             encoder_path, self.prototypes, self.class_names, self.device
         )
-        print("✅ Classifier updated successfully")
+        print("Classifier updated successfully")
 
-
-# Global ML service instance
 ml_service = MLService()

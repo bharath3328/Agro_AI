@@ -12,8 +12,6 @@ export default function Dashboard() {
   const [preview, setPreview] = useState(null)
   const [loading, setLoading] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
-  const [cropType, setCropType] = useState('')
-  const [location, setLocation] = useState('')
   const navigate = useNavigate()
 
   const onDrop = useCallback((acceptedFiles) => {
@@ -51,8 +49,6 @@ export default function Dashboard() {
 
     const formData = new FormData()
     formData.append('file', file)
-    if (cropType) formData.append('crop_type', cropType)
-    if (location) formData.append('location', location)
 
     try {
       const response = await api.post('/diagnosis/predict', formData, {
@@ -78,8 +74,6 @@ export default function Dashboard() {
   const handleReset = () => {
     setFile(null)
     setPreview(null)
-    setCropType('')
-    setLocation('')
   }
 
   return (
@@ -151,38 +145,7 @@ export default function Dashboard() {
             )}
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Crop Type */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Crop Type (Optional)
-              </label>
-              <div className="relative">
-                <Sprout className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={cropType}
-                  onChange={(e) => setCropType(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:text-white transition-colors"
-                  placeholder="e.g., Tomato, Potato"
-                />
-              </div>
-            </div>
 
-            {/* Location */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Location (Optional)
-              </label>
-              <input
-                type="text"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:text-white transition-colors"
-                placeholder="e.g., Greenhouse 1"
-              />
-            </div>
-          </div>
 
           {/* Submit Button */}
           {loading ? (

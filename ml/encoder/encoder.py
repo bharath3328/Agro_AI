@@ -3,12 +3,6 @@ import torch.nn as nn
 from torchvision import models
 
 class Encoder(nn.Module):
-    """
-    CNN Encoder for few-shot plant disease recognition
-    Based on lightweight architecture (MobileNetV3)
-    Inspired by Mu et al., 2024
-    """
-
     def __init__(self, embedding_dim=128):
         super().__init__()
 

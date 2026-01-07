@@ -12,13 +12,14 @@ export default function Verify() {
 
     // Get email from state or allow user to enter (though state is preferred)
     const [email, setEmail] = useState(location.state?.email || '')
+    const verification_token = location.state?.verification_token
 
     const handleSubmit = async (e) => {
         e.preventDefault()
         setLoading(true)
 
         try {
-            await api.post('/auth/verify', { email, code })
+            await api.post('/auth/verify', { email, code, verification_token })
             toast.success('Account verified successfully! Please login.')
             navigate('/login')
         } catch (error) {

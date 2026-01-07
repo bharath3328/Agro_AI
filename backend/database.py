@@ -15,18 +15,13 @@ DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = os.getenv("DB_PORT", "3306")
 DB_NAME = os.getenv("DB_NAME", "agroai")
 
-if DB_USER and DB_PASSWORD:
-    # URL encode password to handle special characters like '@'
-    encoded_password = quote_plus(DB_PASSWORD)
-    # MySQL Connection
-    DATABASE_URL = f"mysql+pymysql://{DB_USER}:{encoded_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-    connect_args = {}
-    print(f"🔌 Connecting to MySQL Database: {DB_NAME} at {DB_HOST}")
-else:
-    # Fallback to SQLite
-    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./agroai.db")
-    connect_args = {"check_same_thread": False}
-    print("info: Using SQLite Database")
+if not DB_USER or not DB_PASSWORD:
+    raise ValueError("DB_USER and DB_PASSWORD must be set in environment variables.")
+
+encoded_password = quote_plus(DB_PASSWORD)
+DATABASE_URL = f"mysql+pymysql://{DB_USER}:{encoded_password}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+connect_args = {}
+print(f"Connecting to MySQL Database: {DB_NAME} at {DB_HOST}")
 
 # Create engine
 engine = create_engine(
@@ -43,7 +38,6 @@ Base = declarative_base()
 
 
 def get_db():
-    """Dependency for getting database session"""
     db = SessionLocal()
     try:
         yield db
@@ -52,5 +46,4 @@ def get_db():
 
 
 def init_db():
-    """Initialize database tables"""
     Base.metadata.create_all(bind=engine)

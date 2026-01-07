@@ -34,9 +34,14 @@ export default function Register() {
     try {
       // Exclude confirmPassword from data sent to backend
       const { confirmPassword, ...registrationData } = formData
-      await register(registrationData)
+      const responseHook = await register(registrationData)
       toast.success('Registration successful! Please verify your email.')
-      navigate('/verify', { state: { email: formData.email } })
+      navigate('/verify', {
+        state: {
+          email: formData.email,
+          verification_token: responseHook.verification_token
+        }
+      })
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Registration failed')
     } finally {

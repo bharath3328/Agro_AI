@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from backend.database import get_db
-from backend.models import User, VerificationCode
+from backend.models import User
 from backend.auth_utils import (
     verify_password,
     get_password_hash,
@@ -41,6 +41,8 @@ class UserResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class RegisterResponse(UserResponse):
+    verification_token: str 
 
 class Token(BaseModel):
     access_token: str
@@ -51,23 +53,27 @@ class Token(BaseModel):
 class VerifyAccountRequest(BaseModel):
     email: EmailStr
     code: str
+    verification_token: str
 
 
 class ForgotPasswordRequest(BaseModel):
     email: Optional[EmailStr] = None
-    phone: Optional[str] = None
+
+
+class ForgotPasswordResponse(BaseModel):
+    message: str
+    verification_token: Optional[str] = None
 
 
 class ResetPasswordRequest(BaseModel):
     email: Optional[EmailStr] = None
-    phone: Optional[str] = None
+    verification_token: str
     code: str
     new_password: str
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
 def register(user_data: UserCreate, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    """Register a new user and send verification code"""
     
     # Check if user already exists
     if db.query(User).filter(User.email == user_data.email).first():
@@ -95,25 +101,15 @@ def register(user_data: UserCreate, background_tasks: BackgroundTasks, db: Sessi
         )
         
         db.add(db_user)
-        # Flush to get the ID but don't commit yet
-        db.flush() 
-        
-        # Generate verification code
-        code = generate_verification_code()
-        expires_at = datetime.utcnow() + timedelta(minutes=10)
-        
-        verification_entry = VerificationCode(
-            user_id=db_user.id,
-            code=code,
-            type="EMAIL_VERIFICATION",
-            via="EMAIL",
-            expires_at=expires_at
-        )
-        db.add(verification_entry)
-        
-        # Commit everything at once
         db.commit()
         db.refresh(db_user)
+        
+        # Generate verification code & Stateless Token
+        code = generate_verification_code()
+        
+        # Create stateless token
+        from backend.auth_utils import create_verification_token
+        verification_token = create_verification_token(user_data.email, code, purpose="REGISTRATION")
         
         # Send email in background
         background_tasks.add_task(
@@ -123,7 +119,10 @@ def register(user_data: UserCreate, background_tasks: BackgroundTasks, db: Sessi
             "EMAIL"
         )
         
-        return db_user
+        # Convert to response model
+        response = RegisterResponse.from_orm(db_user)
+        response.verification_token = verification_token
+        return response
         
     except Exception as e:
         db.rollback()
@@ -137,7 +136,12 @@ def register(user_data: UserCreate, background_tasks: BackgroundTasks, db: Sessi
 
 @router.post("/verify")
 def verify_account(request: VerifyAccountRequest, db: Session = Depends(get_db)):
-    """Verify user account with code"""
+    from backend.auth_utils import verify_code_token
+
+    # Verify the token and code first (stateless)
+    verify_code_token(request.verification_token, request.code, request.email, purpose="REGISTRATION")
+    
+    # If successful, activate user in DB
     user = db.query(User).filter(User.email == request.email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -145,21 +149,8 @@ def verify_account(request: VerifyAccountRequest, db: Session = Depends(get_db))
     if user.is_verified:
         return {"message": "Account already verified"}
     
-    # Find valid code
-    verification = db.query(VerificationCode).filter(
-        VerificationCode.user_id == user.id,
-        VerificationCode.code == request.code,
-        VerificationCode.type == "EMAIL_VERIFICATION",
-        VerificationCode.is_used == False,
-        VerificationCode.expires_at > datetime.utcnow()
-    ).first()
-    
-    if not verification:
-        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
-    
     # Mark as verified
     user.is_verified = True
-    verification.is_used = True
     db.commit()
     
     return {"message": "Account verified successfully"}
@@ -170,8 +161,6 @@ def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
-    """Login and get access token"""
-    
     # Find user by username or email
     user = db.query(User).filter(
         (User.username == form_data.username) | (User.email == form_data.username)
@@ -203,9 +192,8 @@ def login(
     }
 
 
-@router.post("/forgot-password")
+@router.post("/forgot-password", response_model=ForgotPasswordResponse)
 def forgot_password(request: ForgotPasswordRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    """Request password reset code (Email only)"""
     user = None
     
     if request.email:
@@ -217,17 +205,10 @@ def forgot_password(request: ForgotPasswordRequest, background_tasks: Background
     
     # Generate code
     code = generate_verification_code()
-    expires_at = datetime.utcnow() + timedelta(minutes=10)
     
-    verification_entry = VerificationCode(
-        user_id=user.id,
-        code=code,
-        type="PASSWORD_RESET",
-        via="EMAIL",
-        expires_at=expires_at
-    )
-    db.add(verification_entry)
-    db.commit()
+    # Create stateless token
+    from backend.auth_utils import create_verification_token
+    verification_token = create_verification_token(user.email, code, purpose="PASSWORD_RESET")
     
     # Send notification
     background_tasks.add_task(
@@ -236,38 +217,28 @@ def forgot_password(request: ForgotPasswordRequest, background_tasks: Background
         code,
         "EMAIL"
     )
-    
-    return {"message": "If an account exists, a code has been sent."}
+     
+    return {
+        "message": "Code sent successfully",
+        "verification_token": verification_token
+    }
 
 
 @router.post("/reset-password")
 def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)):
-    """Reset password using verification code"""
-    user = None
-    
-    if request.email:
-        user = db.query(User).filter(User.email == request.email).first()
-    elif request.phone:
-        user = db.query(User).filter(User.phone == request.phone).first()
-        
+    if not request.email:
+         raise HTTPException(status_code=400, detail="Email is required")
+
+    # Verify the token
+    from backend.auth_utils import verify_code_token
+    verify_code_token(request.verification_token, request.code, request.email, purpose="PASSWORD_RESET")
+
+    user = db.query(User).filter(User.email == request.email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
-    # Verify code
-    verification = db.query(VerificationCode).filter(
-        VerificationCode.user_id == user.id,
-        VerificationCode.code == request.code,
-        VerificationCode.type == "PASSWORD_RESET",
-        VerificationCode.is_used == False,
-        VerificationCode.expires_at > datetime.utcnow()
-    ).first()
-    
-    if not verification:
-        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
-        
     # Update password
     user.hashed_password = get_password_hash(request.new_password)
-    verification.is_used = True
     db.commit()
     
     return {"message": "Password reset successfully"}
@@ -275,5 +246,4 @@ def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db))
 
 @router.get("/me", response_model=UserResponse)
 def get_current_user_info(current_user: User = Depends(get_current_active_user)):
-    """Get current user information"""
     return current_user

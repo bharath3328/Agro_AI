@@ -9,7 +9,6 @@ export default function History() {
   const [loading, setLoading] = useState(true)
   const [showFilters, setShowFilters] = useState(false)
   const [filterStatus, setFilterStatus] = useState('all') // all, healthy, diseased, unknown
-  const [filterCrop, setFilterCrop] = useState('all')
   const [sortBy, setSortBy] = useState('newest') // newest, oldest
 
   useEffect(() => {
@@ -27,8 +26,7 @@ export default function History() {
     }
   }
 
-  // Get unique crop types
-  const uniqueCropTypes = ['all', ...new Set(predictions.map(p => p.crop_type).filter(Boolean))]
+
 
   const getStatusIcon = (prediction) => {
     if (prediction.is_unknown) {
@@ -53,8 +51,7 @@ export default function History() {
         if (filterStatus === 'diseased' && (prediction.is_unknown || prediction.disease_name.toLowerCase().includes('healthy'))) return false
       }
 
-      // Crop Type Filter
-      if (filterCrop !== 'all' && prediction.crop_type !== filterCrop) return false
+
 
       return true
     })
@@ -115,30 +112,7 @@ export default function History() {
                   </div>
                 </div>
 
-                {uniqueCropTypes.length > 1 && (
-                  <>
-                    <div className="h-px bg-gray-100 dark:bg-gray-700" />
-                    <div>
-                      <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 block uppercase tracking-wider">Crop Type</label>
-                      <div className="space-y-1 max-h-40 overflow-y-auto">
-                        {uniqueCropTypes.map((crop) => (
-                          <button
-                            key={crop}
-                            onClick={() => setFilterCrop(crop)}
-                            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${filterCrop === crop
-                              ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium'
-                              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
-                              }`}
-                          >
-                            {crop === 'all' ? 'All Crops' : crop}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
 
-                <div className="h-px bg-gray-100 dark:bg-gray-700" />
 
                 <div>
                   <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2 block uppercase tracking-wider">Sort By</label>
@@ -188,7 +162,6 @@ export default function History() {
             <button
               onClick={() => {
                 setFilterStatus('all')
-                setFilterCrop('all')
               }}
               className="inline-flex items-center gap-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-6 py-3 rounded-xl font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
             >
@@ -229,12 +202,7 @@ export default function History() {
                           year: 'numeric', month: 'long', day: 'numeric'
                         })}
                       </div>
-                      {prediction.crop_type && (
-                        <>
-                          <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
-                          <span>{prediction.crop_type}</span>
-                        </>
-                      )}
+
 
                       {prediction.disease_stage && (
                         <div className="ml-auto sm:ml-0">

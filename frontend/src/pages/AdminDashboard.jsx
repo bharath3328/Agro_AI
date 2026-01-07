@@ -5,7 +5,7 @@ import toast from 'react-hot-toast'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
-import DiseaseChart from '../components/DiseaseChart'
+
 
 export default function AdminDashboard() {
     const { user } = useAuth()
@@ -144,8 +144,8 @@ export default function AdminDashboard() {
                     <button
                         onClick={() => setActiveTab('overview')}
                         className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'overview'
-                                ? 'bg-white dark:bg-dark-surface text-primary-600 shadow-sm'
-                                : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
+                            ? 'bg-white dark:bg-dark-surface text-primary-600 shadow-sm'
+                            : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
                             }`}
                     >
                         Overview
@@ -153,8 +153,8 @@ export default function AdminDashboard() {
                     <button
                         onClick={() => setActiveTab('users')}
                         className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'users'
-                                ? 'bg-white dark:bg-dark-surface text-primary-600 shadow-sm'
-                                : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
+                            ? 'bg-white dark:bg-dark-surface text-primary-600 shadow-sm'
+                            : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
                             }`}
                     >
                         User Management
@@ -162,8 +162,8 @@ export default function AdminDashboard() {
                     <button
                         onClick={() => setActiveTab('reports')}
                         className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'reports'
-                                ? 'bg-white dark:bg-dark-surface text-primary-600 shadow-sm'
-                                : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
+                            ? 'bg-white dark:bg-dark-surface text-primary-600 shadow-sm'
+                            : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
                             }`}
                     >
                         Reported Cases
@@ -175,129 +175,76 @@ export default function AdminDashboard() {
             </div>
 
             {activeTab === 'overview' && (
-                <div className="grid lg:grid-cols-3 gap-8">
+                <div className="max-w-3xl mx-auto">
                     {/* Training Card */}
-                    <div className="lg:col-span-2">
-                        <div className="bg-white dark:bg-dark-surface rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-8">
-                            <div className="mb-8">
-                                <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                    <Plus className="w-6 h-6 text-primary-500" />
-                                    Train New Disease
-                                </h2>
-                                <p className="text-gray-500 dark:text-gray-400 mt-1">
-                                    Add a new disease class to the model dynamically. No downtime required.
-                                </p>
+                    <div className="bg-white dark:bg-dark-surface rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-8">
+                        <div className="mb-8">
+                            <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                <Plus className="w-6 h-6 text-primary-500" />
+                                Train New Disease
+                            </h2>
+                            <p className="text-gray-500 dark:text-gray-400 mt-1">
+                                Add a new disease class to the model dynamically. No downtime required.
+                            </p>
+                        </div>
+
+                        <form onSubmit={handleTrain} className="space-y-6">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Disease Name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={diseaseName}
+                                    onChange={(e) => setDiseaseName(e.target.value)}
+                                    placeholder="e.g. Tomato Early Blight"
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-primary-100 outline-none transition-all"
+                                />
                             </div>
 
-                            <form onSubmit={handleTrain} className="space-y-6">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        Disease Name
-                                    </label>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                    Training Images
+                                </label>
+                                <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl p-8 text-center bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                                     <input
-                                        type="text"
-                                        value={diseaseName}
-                                        onChange={(e) => setDiseaseName(e.target.value)}
-                                        placeholder="e.g. Tomato Early Blight"
-                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-primary-100 outline-none transition-all"
+                                        type="file"
+                                        multiple
+                                        onChange={handleFileChange}
+                                        accept="image/*"
+                                        className="hidden"
+                                        id="images-upload"
                                     />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                        Training Images
+                                    <label htmlFor="images-upload" className="cursor-pointer block">
+                                        <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+                                        <p className="text-gray-900 dark:text-white font-medium mb-1">
+                                            {files.length > 0 ? `${files.length} images selected` : 'Click to upload images'}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                            Recommended: 5-20 distinct images
+                                        </p>
                                     </label>
-                                    <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl p-8 text-center bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                                        <input
-                                            type="file"
-                                            multiple
-                                            onChange={handleFileChange}
-                                            accept="image/*"
-                                            className="hidden"
-                                            id="images-upload"
-                                        />
-                                        <label htmlFor="images-upload" className="cursor-pointer block">
-                                            <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-                                            <p className="text-gray-900 dark:text-white font-medium mb-1">
-                                                {files.length > 0 ? `${files.length} images selected` : 'Click to upload images'}
-                                            </p>
-                                            <p className="text-xs text-gray-500">
-                                                Recommended: 5-20 distinct images
-                                            </p>
-                                        </label>
-                                    </div>
                                 </div>
+                            </div>
 
-                                <button
-                                    type="submit"
-                                    disabled={training}
-                                    className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all ${training
-                                        ? 'bg-gray-400 cursor-not-allowed'
-                                        : 'bg-primary-600 hover:bg-primary-700 hover:-translate-y-1 hover:shadow-xl'
-                                        }`}
-                                >
-                                    {training ? (
-                                        <span className="flex items-center justify-center gap-2">
-                                            <RefreshCw className="w-5 h-5 animate-spin" />
-                                            Training Model...
-                                        </span>
-                                    ) : (
-                                        'Start Training'
-                                    )}
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-
-                    {/* Stats Card */}
-                    <div className="space-y-6">
-                        <div className="bg-white dark:bg-dark-surface rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-6">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6">System Health</h3>
-
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between p-4 rounded-xl bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300">
-                                    <div className="flex items-center gap-3">
-                                        <CheckCircle className="w-5 h-5" />
-                                        <span className="font-medium">Model Status</span>
-                                    </div>
-                                    <span className="font-bold">Active</span>
-                                </div>
-
-                                {stats && (
-                                    <>
-                                        <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50">
-                                            <span className="text-gray-600 dark:text-gray-400">Total Users</span>
-                                            <span className="text-xl font-bold text-gray-900 dark:text-white">{stats.total_users}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50">
-                                            <span className="text-gray-600 dark:text-gray-400">Predictions</span>
-                                            <span className="text-xl font-bold text-gray-900 dark:text-white">{stats.total_predictions}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50">
-                                            <span className="text-gray-600 dark:text-gray-400">Disease Classes</span>
-                                            <span className="text-xl font-bold text-primary-600 dark:text-primary-400">{stats.unique_diseases_detected}</span>
-                                        </div>
-                                    </>
+                            <button
+                                type="submit"
+                                disabled={training}
+                                className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all ${training
+                                    ? 'bg-gray-400 cursor-not-allowed'
+                                    : 'bg-primary-600 hover:bg-primary-700 hover:-translate-y-1 hover:shadow-xl'
+                                    }`}
+                            >
+                                {training ? (
+                                    <span className="flex items-center justify-center gap-2">
+                                        <RefreshCw className="w-5 h-5 animate-spin" />
+                                        Training Model...
+                                    </span>
+                                ) : (
+                                    'Start Training'
                                 )}
-                            </div>
-                        </div>
-
-                        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-6 border border-blue-100 dark:border-blue-800">
-                            <div className="flex items-start gap-3">
-                                <AlertCircle className="w-6 h-6 text-blue-600 dark:text-blue-400 mt-0.5" />
-                                <div>
-                                    <h4 className="font-bold text-blue-900 dark:text-blue-300 mb-1">Tip</h4>
-                                    <p className="text-sm text-blue-800 dark:text-blue-200/80">
-                                        When adding a new disease, try to include images with different lighting and angles to improve robustness.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Analytics Chart */}
-                        <div>
-                            <DiseaseChart data={diseaseStats} />
-                        </div>
+                            </button>
+                        </form>
                     </div>
                 </div>
             )}
@@ -313,7 +260,6 @@ export default function AdminDashboard() {
                                     <th className="px-6 py-4 font-semibold text-gray-900 dark:text-white">Role</th>
                                     <th className="px-6 py-4 font-semibold text-gray-900 dark:text-white">Predictions</th>
                                     <th className="px-6 py-4 font-semibold text-gray-900 dark:text-white">Joined</th>
-                                    <th className="px-6 py-4 font-semibold text-gray-900 dark:text-white">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -341,11 +287,6 @@ export default function AdminDashboard() {
                                         </td>
                                         <td className="px-6 py-4 text-gray-500 dark:text-gray-400">
                                             {new Date(user.created_at).toLocaleDateString()}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <button className="text-primary-600 hover:text-primary-700 font-medium">
-                                                Edit
-                                            </button>
                                         </td>
                                     </tr>
                                 ))}

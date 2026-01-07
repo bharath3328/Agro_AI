@@ -1,6 +1,3 @@
-"""
-Admin Router - Admin-only endpoints for user management and analytics
-"""
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -12,7 +9,6 @@ from backend.models import User, Prediction, DiseaseHistory
 from backend.auth_utils import get_current_admin_user
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
-
 
 class UserStats(BaseModel):
     total_users: int
@@ -29,7 +25,7 @@ class DiseaseStats(BaseModel):
     early_stage_count: int
     mid_stage_count: int
     late_stage_count: int
-    crop_type: Optional[str] = None
+    late_stage_count: int
 
 
 class UserInfo(BaseModel):
@@ -91,7 +87,6 @@ def get_all_users(
     current_user: User = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
-    """Get all users with their prediction counts"""
     
     users = db.query(
         User,

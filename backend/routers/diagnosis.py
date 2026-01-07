@@ -33,8 +33,6 @@ router = APIRouter(prefix="/diagnosis", tags=["Disease Diagnosis"])
 
 
 class DiagnosisRequest(BaseModel):
-    crop_type: Optional[str] = None
-    location: Optional[str] = None
     notes: Optional[str] = None
 
 
@@ -149,8 +147,6 @@ def generate_gradcam(image_path: str, prototype: torch.Tensor, user_id: int) -> 
 @router.post("/predict", response_model=DiagnosisResponse, status_code=status.HTTP_201_CREATED)
 async def predict_disease(
     file: UploadFile = File(...),
-    crop_type: Optional[str] = None,
-    location: Optional[str] = None,
     notes: Optional[str] = None,
     current_user = Depends(get_current_active_user),
     db: Session = Depends(get_db)
@@ -209,7 +205,7 @@ async def predict_disease(
             try:
                 ai_advisory = generate_ai_advisory(
                     disease=disease_name,
-                    crop=crop_type or "Unknown",
+                    crop="Unknown",
                     confidence=confidence_score,
                     severity=disease_stage
                 )
@@ -230,8 +226,6 @@ async def predict_disease(
             gradcam_path=gradcam_path,
             cam_coverage=cam_coverage,
             ai_advisory=ai_advisory,
-            crop_type=crop_type,
-            location=location,
             notes=notes
         )
         
@@ -260,7 +254,6 @@ async def predict_disease(
             else:
                 history = DiseaseHistory(
                     disease_name=disease_name,
-                    crop_type=crop_type,
                     total_detections=1,
                     avg_confidence=confidence_score,
                     early_stage_count=1 if disease_stage == "Early" else 0,

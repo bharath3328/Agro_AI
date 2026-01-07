@@ -19,9 +19,6 @@ def generate_ai_advisory(
     confidence,
     severity
 ):
-    """
-    API-based AI reasoning engine for disease-specific advisory
-    """
     
     if not client or not api_key:
         return "AI advisory feature requires OPENAI_API_KEY to be set in environment variables."

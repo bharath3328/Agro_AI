@@ -12,7 +12,7 @@ export default function ResetPassword() {
     const location = useLocation()
     const navigate = useNavigate()
 
-    const { contact, method } = location.state || {}
+    const { contact, method, verification_token } = location.state || {}
 
     const handleSubmit = async (e) => {
         e.preventDefault()
@@ -28,6 +28,7 @@ export default function ResetPassword() {
             const payload = {
                 code,
                 new_password: newPassword,
+                verification_token,
                 ...(method === 'email' ? { email: contact } : { phone: contact })
             }
 

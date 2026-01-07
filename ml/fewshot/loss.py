@@ -3,22 +3,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class SupConLoss(nn.Module):
-    """
-    Supervised Contrastive Loss
-    Based on: Khosla et al., NeurIPS 2020
-    With numerical stability fixes for few-shot settings
-    """
-
     def __init__(self, temperature=0.07):
         super().__init__()
         self.temperature = temperature
 
     def forward(self, features, labels):
-        """
-        features: Tensor of shape [batch_size, embedding_dim]
-        labels: Tensor of shape [batch_size]
-        """
-
         device = features.device
         batch_size = features.size(0)
 

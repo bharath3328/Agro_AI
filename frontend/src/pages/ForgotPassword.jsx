@@ -14,11 +14,17 @@ export default function ForgotPassword() {
         setLoading(true)
 
         try {
-            await api.post('/auth/forgot-password', { email })
+            const response = await api.post('/auth/forgot-password', { email })
             // Always show success message for security/ux
             toast.success('If an account exists, a code has been sent.')
             // Navigate to reset password page
-            navigate('/reset-password', { state: { contact: email, method: 'email' } })
+            navigate('/reset-password', {
+                state: {
+                    contact: email,
+                    method: 'email',
+                    verification_token: response.data.verification_token
+                }
+            })
         } catch (error) {
             toast.error('An error occurred. Please try again.')
         } finally {

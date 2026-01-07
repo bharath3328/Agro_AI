@@ -1,3 +1,0 @@
-"""
-AgroAI Backend Package
-"""
