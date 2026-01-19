@@ -86,7 +86,7 @@ def get_current_active_user(
     return current_user
 
 
-def create_verification_token(email: str, code: str, purpose: str = "verification"):
+def create_verification_token(email: str, code: str, purpose: str = "verification", extra_data: dict = None):
     expire = datetime.utcnow() + timedelta(minutes=10)
     code_hash = get_password_hash(code) 
     
@@ -96,6 +96,10 @@ def create_verification_token(email: str, code: str, purpose: str = "verificatio
         "code_hash": code_hash,
         "exp": expire
     }
+    
+    if extra_data:
+        to_encode.update(extra_data)
+        
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
@@ -111,12 +115,11 @@ def verify_code_token(token: str, input_code: str, email: str, purpose: str = "v
             raise HTTPException(status_code=400, detail="Token does not match email")
             
         if token_purpose != purpose:
-             raise HTTPException(status_code=400, detail="Invalid token purpose")
+            raise HTTPException(status_code=400, detail="Invalid token purpose")
 
         if not verify_password(input_code, code_hash):
-             raise HTTPException(status_code=400, detail="Invalid verification code")
-             
-        return True
+            raise HTTPException(status_code=400, detail="Invalid verification code")
+        return payload
     
     except JWTError:
         raise HTTPException(status_code=400, detail="Invalid or expired verification token")

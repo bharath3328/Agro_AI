@@ -31,10 +31,7 @@ class MLService:
     
     def initialize(self):
         if self.classifier is not None:
-            print("ML models already initialized")
             return
-        
-        print("Initializing ML models...")
         
         encoder_path = settings.ENCODER_PATH
         train_dir = settings.TRAIN_DATA_DIR
@@ -45,26 +42,20 @@ class MLService:
         if not os.path.exists(train_dir):
             raise FileNotFoundError(f"Training data directory not found at {train_dir}")
         
-        # Compute open-set threshold
-        print("Computing open-set threshold...")
         self.threshold = compute_open_set_threshold(
             encoder_path, train_dir, self.device, percentile=0.5
         )
         print(f"Open-set threshold: {self.threshold:.3f}")
         
-        print("Computing prototypes...")
         self.prototypes, self.class_names = compute_prototypes(
             encoder_path, train_dir, self.device
         )
         print(f"Loaded {len(self.class_names)} disease classes")
         
-        print("Initializing classifier...")
         self.classifier = PrototypeClassifier(
             encoder_path, self.prototypes, self.class_names, self.device
         )
         
-        print("ML models initialized successfully!")
-    
     def get_classifier(self) -> PrototypeClassifier:
         if self.classifier is None:
             self.initialize()
@@ -76,7 +67,6 @@ class MLService:
         return self.threshold
 
     def retrain_model(self):
-        print("Retraining model with new data...")
         self.classifier = None
         encoder_path = settings.ENCODER_PATH
         train_dir = settings.TRAIN_DATA_DIR
@@ -88,6 +78,5 @@ class MLService:
         self.classifier = PrototypeClassifier(
             encoder_path, self.prototypes, self.class_names, self.device
         )
-        print("Classifier updated successfully")
 
 ml_service = MLService()

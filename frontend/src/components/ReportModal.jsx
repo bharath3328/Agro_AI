@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { toast } from 'react-hot-toast';
 import { X, AlertTriangle, Send } from 'lucide-react';
 
@@ -15,12 +15,9 @@ const ReportModal = ({ predictionId, onClose }) => {
         setLoading(true);
 
         try {
-            const token = localStorage.getItem('token');
-            await axios.post('/api/v1/diagnosis/report', {
+            await api.post('/diagnosis/report', {
                 prediction_id: predictionId,
                 ...formData
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
             });
 
             toast.success('Report submitted successfully!');

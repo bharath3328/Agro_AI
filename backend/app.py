@@ -9,22 +9,16 @@ from backend.routers import auth, diagnosis, admin
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Starting AgroAI Backend")
-    print("Initializing database")
     init_db()
     print("Database initialized")
-    print("Initializing ML models")
     try:
         ml_service.initialize()
         print("ML models loaded successfully")
     except Exception as e:
-        print(f"Warning: ML models failed to initialize: {e}")
-        print("Some endpoints may not work until models are available")
-    
+        print(f"Warning: ML models failed to initialize: {e}")    
     yield
     print("Shutting down AgroAI Backend...")
 
-
-# Create FastAPI app
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
@@ -32,7 +26,6 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -41,7 +34,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(diagnosis.router, prefix=settings.API_V1_PREFIX)
 app.include_router(admin.router, prefix=settings.API_V1_PREFIX)

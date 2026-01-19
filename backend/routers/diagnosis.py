@@ -27,9 +27,54 @@ from ml.gradcam import GradCAM
 from ml.encoder import Encoder
 from ml.transforms import inference_transform
 from ml.agro_intelligence import assess_disease_intelligence
-from ml.api_reasoner import generate_ai_advisory
+from ml.api_reasoner import generate_ai_advisory, translate_text, translate_batch
 
 router = APIRouter(prefix="/diagnosis", tags=["Disease Diagnosis"])
+
+class TranslateRequest(BaseModel):
+    text: str
+    target_language: str
+
+class TranslateBatchRequest(BaseModel):
+    texts: dict[str, str]
+    target_language: str
+
+@router.post("/translate", status_code=status.HTTP_200_OK)
+def translate_content(
+    request: TranslateRequest,
+    current_user = Depends(get_current_active_user)
+):
+    """
+    Translate text to target language
+    """
+    try:
+        translated_text = translate_text(request.text, request.target_language)
+        return {"translated_text": translated_text}
+    except Exception as e:
+        logger.error(f"Translation failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Translation service unavailable"
+        )
+
+@router.post("/translate/batch", status_code=status.HTTP_200_OK)
+def translate_content_batch(
+    request: TranslateBatchRequest,
+    current_user = Depends(get_current_active_user)
+):
+    """
+    Translate multiple texts in a single API call to avoid rate limits.
+    """
+    try:
+        # Only send non-empty values to translation service
+        result = translate_batch(request.texts, request.target_language)
+        return result
+    except Exception as e:
+        logger.error(f"Batch translation failed: {str(e)}")
+        # Fallback: return original texts
+        return request.texts
+
+
 
 
 class DiagnosisRequest(BaseModel):
@@ -358,10 +403,13 @@ def get_uploaded_image(
     db: Session = Depends(get_db)
 ):
     """Get original uploaded image"""
-    prediction = db.query(Prediction).filter(
-        Prediction.id == prediction_id,
-        Prediction.user_id == current_user.id
-    ).first()
+    query = db.query(Prediction).filter(Prediction.id == prediction_id)
+    
+    # If not admin, restrict to own predictions
+    if not current_user.is_admin:
+        query = query.filter(Prediction.user_id == current_user.id)
+        
+    prediction = query.first()
     
     if not prediction:
         raise HTTPException(
@@ -385,7 +433,12 @@ class ReportRequest(BaseModel):
     description: Optional[str] = None
 
 
+
+
+
+
 @router.post("/report", status_code=status.HTTP_201_CREATED)
+
 def report_unknown_case(
     report: ReportRequest,
     current_user = Depends(get_current_active_user),

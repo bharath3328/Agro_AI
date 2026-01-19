@@ -1,11 +1,13 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Home, History, LogOut, Upload, Leaf, Shield } from 'lucide-react'
+import { Home, History, LogOut, Upload, Leaf, Shield, Languages } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ThemeToggle from './ThemeToggle'
+import { useLanguage, LANGUAGES } from '../contexts/LanguageContext'
 
 export default function Layout() {
   const { user, logout } = useAuth()
+  const { language, setLanguage } = useLanguage()
   const location = useLocation()
 
   const handleLogout = () => {
@@ -62,6 +64,32 @@ export default function Layout() {
                   <Shield className="w-5 h-5" />
                   <span className="hidden sm:inline">Admin</span>
                 </Link>
+              )}
+
+              {location.pathname.startsWith('/prediction/') && (
+                <div className="relative group">
+                  <button className="flex items-center gap-2 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                    <Languages className="w-5 h-5" />
+                    <span className="hidden sm:inline">{language}</span>
+                  </button>
+                  <div className="absolute right-0 top-full pt-2 w-48 hidden group-hover:block z-50 animate-in fade-in slide-in-from-top-2">
+                    <div className="bg-white dark:bg-dark-surface rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 py-1">
+                      {LANGUAGES.map((lang) => (
+                        <button
+                          key={lang.code}
+                          onClick={() => setLanguage(lang.name)}
+                          className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center justify-between ${language === lang.name
+                            ? 'text-primary-600 dark:text-primary-400 font-medium bg-primary-50 dark:bg-primary-900/10'
+                            : 'text-gray-700 dark:text-gray-300'
+                            }`}
+                        >
+                          <span>{lang.name}</span>
+                          <span className="text-xs text-gray-400">{lang.native}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               )}
 
               <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 mx-2" />

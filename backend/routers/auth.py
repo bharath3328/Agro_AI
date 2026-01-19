@@ -41,8 +41,10 @@ class UserResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class RegisterResponse(UserResponse):
+class RegisterResponse(BaseModel):
+    message: str
     verification_token: str 
+    email: str 
 
 class Token(BaseModel):
     access_token: str
@@ -89,27 +91,28 @@ def register(user_data: UserCreate, background_tasks: BackgroundTasks, db: Sessi
         )
     
     try:
-        # Create new user
+        # Prepare user data (stateless)
         hashed_password = get_password_hash(user_data.password)
-        db_user = User(
-            email=user_data.email,
-            username=user_data.username,
-            hashed_password=hashed_password,
-            full_name=user_data.full_name,
-            phone=user_data.phone,
-            is_verified=False  # User must verify
-        )
         
-        db.add(db_user)
-        db.commit()
-        db.refresh(db_user)
+        # We store these details in the token to persist them until verification
+        registration_data = {
+            "reg_username": user_data.username,
+            "reg_password_hash": hashed_password,
+            "reg_full_name": user_data.full_name,
+            "reg_phone": user_data.phone
+        }
         
-        # Generate verification code & Stateless Token
+        # Generate verification code
         code = generate_verification_code()
         
-        # Create stateless token
+        # Create stateless token with user data embedded
         from backend.auth_utils import create_verification_token
-        verification_token = create_verification_token(user_data.email, code, purpose="REGISTRATION")
+        verification_token = create_verification_token(
+            email=user_data.email, 
+            code=code, 
+            purpose="REGISTRATION",
+            extra_data=registration_data
+        )
         
         # Send email in background
         background_tasks.add_task(
@@ -119,13 +122,13 @@ def register(user_data: UserCreate, background_tasks: BackgroundTasks, db: Sessi
             "EMAIL"
         )
         
-        # Convert to response model
-        response = RegisterResponse.from_orm(db_user)
-        response.verification_token = verification_token
-        return response
+        return {
+            "message": "Verification code sent",
+            "verification_token": verification_token,
+            "email": user_data.email
+        }
         
     except Exception as e:
-        db.rollback()
         import traceback
         traceback.print_exc()
         raise HTTPException(
@@ -138,22 +141,51 @@ def register(user_data: UserCreate, background_tasks: BackgroundTasks, db: Sessi
 def verify_account(request: VerifyAccountRequest, db: Session = Depends(get_db)):
     from backend.auth_utils import verify_code_token
 
-    # Verify the token and code first (stateless)
-    verify_code_token(request.verification_token, request.code, request.email, purpose="REGISTRATION")
+    # Verify logic (stateless) - returns payload if valid
+    payload = verify_code_token(request.verification_token, request.code, request.email, purpose="REGISTRATION")
     
-    # If successful, activate user in DB
-    user = db.query(User).filter(User.email == request.email).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    # Check if user already exists
+    existing_user = db.query(User).filter(User.email == request.email).first()
+    if existing_user:
+        if existing_user.is_verified:
+            return {"message": "Account already verified"}
+        else:
+            # Legacy support: User exists but not verified.
+            # Mark as verified since token was valid
+            existing_user.is_verified = True
+            db.commit()
+            return {"message": "Account verified successfully"}
+        
+    # Extract data from payload
+    try:
+        username = payload.get("reg_username")
+        password_hash = payload.get("reg_password_hash")
+        full_name = payload.get("reg_full_name")
+        phone = payload.get("reg_phone")
+        
+        if not username or not password_hash:
+             raise HTTPException(status_code=400, detail="Invalid token data: Missing registration info")
+
+        # Create user now
+        db_user = User(
+            email=request.email,
+            username=username,
+            hashed_password=password_hash,
+            full_name=full_name,
+            phone=phone,
+            is_verified=True, # Verified immediately
+            is_active=True
+        )
+        
+        db.add(db_user)
+        db.commit()
+        
+    except Exception as e:
+        db.rollback()
+        print(f"Error creating user: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create user account")
     
-    if user.is_verified:
-        return {"message": "Account already verified"}
-    
-    # Mark as verified
-    user.is_verified = True
-    db.commit()
-    
-    return {"message": "Account verified successfully"}
+    return {"message": "Account verified and created successfully"}
 
 
 @router.post("/login", response_model=Token)

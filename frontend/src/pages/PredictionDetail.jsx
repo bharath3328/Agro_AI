@@ -5,6 +5,7 @@ import api from '../services/api'
 import toast from 'react-hot-toast'
 import AIAdvisoryCard from '../components/AIAdvisoryCard'
 import ReportModal from '../components/ReportModal'
+import { useLanguage } from '../contexts/LanguageContext'
 
 export default function PredictionDetail() {
   const { id } = useParams()
@@ -13,6 +14,10 @@ export default function PredictionDetail() {
   const [gradcamUrl, setGradcamUrl] = useState(null)
   const [imageUrl, setImageUrl] = useState(null)
   const [isReportModalOpen, setIsReportModalOpen] = useState(false)
+
+  const { language } = useLanguage()
+  const [translatedContent, setTranslatedContent] = useState({})
+  const [isTranslating, setIsTranslating] = useState(false)
 
   useEffect(() => {
     fetchPrediction()
@@ -49,6 +54,46 @@ export default function PredictionDetail() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (!prediction) return
+
+    if (language === 'English') {
+      setTranslatedContent({})
+      return
+    }
+
+    const translateData = async () => {
+      setIsTranslating(true)
+      const toastId = toast.loading(`Translating to ${language}...`)
+      try {
+        const textsToTranslate = {
+          disease_name: prediction.disease_name,
+          recommended_action: prediction.recommended_action,
+          ai_advisory: prediction.ai_advisory,
+          estimated_yield_loss: prediction.estimated_yield_loss,
+          disease_stage: prediction.disease_stage
+        }
+
+        const response = await api.post('/diagnosis/translate/batch', {
+          texts: textsToTranslate,
+          target_language: language
+        })
+
+        setTranslatedContent(response.data)
+        toast.success(`Translated to ${language}`, { id: toastId })
+      } catch (error) {
+        toast.error('Translation failed', { id: toastId })
+        console.error("Translation error:", error)
+      } finally {
+        setIsTranslating(false)
+      }
+    }
+
+    translateData()
+  }, [prediction, language])
+
+  const displayData = { ...prediction, ...translatedContent }
 
   const getStageColor = (stage) => {
     switch (stage) {
@@ -110,8 +155,9 @@ export default function PredictionDetail() {
           <div className="bg-white dark:bg-dark-surface rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
             <div className="border-b border-gray-100 dark:border-gray-700 p-6 flex justify-between items-start">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  Prediction Results
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-3">
+                  {displayData.disease_name || prediction?.disease_name}
+                  {isTranslating && <span className="text-xs font-normal text-primary-600 animate-pulse">(Translating...)</span>}
                 </h1>
                 <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
                   <div className="flex items-center gap-1.5">
@@ -183,8 +229,9 @@ export default function PredictionDetail() {
           </div>
 
           {/* AI Advisory Section (Prominent) */}
+
           {prediction.ai_advisory && !prediction.is_unknown && !prediction.disease_name.toLowerCase().includes('healthy') && (
-            <AIAdvisoryCard advisory={prediction.ai_advisory} />
+            <AIAdvisoryCard advisory={displayData.ai_advisory} loading={isTranslating} />
           )}
         </div>
 
@@ -217,7 +264,7 @@ export default function PredictionDetail() {
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Detected Pathogen</p>
                   <p className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    {prediction.disease_name}
+                    {displayData.disease_name}
                     <CheckCircle className="w-5 h-5 text-green-500" />
                   </p>
                 </div>
@@ -226,12 +273,12 @@ export default function PredictionDetail() {
                   <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Severity</p>
                     <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-semibold ${getStageColor(prediction.disease_stage)}`}>
-                      {prediction.disease_stage}
+                      {displayData.disease_stage}
                     </span>
                   </div>
                   <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Impact</p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{prediction.estimated_yield_loss}</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{displayData.estimated_yield_loss}</p>
                   </div>
                 </div>
 
@@ -241,7 +288,7 @@ export default function PredictionDetail() {
                     <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Recommended Action</p>
                     <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg">
                       <p className="text-blue-800 dark:text-blue-300 font-medium text-sm">
-                        {prediction.recommended_action}
+                        {displayData.recommended_action}
                       </p>
                     </div>
                   </div>

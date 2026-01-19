@@ -50,7 +50,7 @@ class PrototypeClassifier:
         if len(sorted_scores) > 1:
             margin = sorted_scores[0] - sorted_scores[1]
             if margin < 0.01: 
-                 print(f"DEBUG: Rejected as UNKNOWN (Ambiguous Margin {margin:.4f})")
-                 return "UNKNOWN", float(best_score)
+                print(f"DEBUG: Rejected as UNKNOWN (Ambiguous Margin {margin:.4f})")
+                return "UNKNOWN", float(best_score)
 
         return self.class_names[best_label], float(best_score)

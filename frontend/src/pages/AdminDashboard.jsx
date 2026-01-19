@@ -99,28 +99,7 @@ export default function AdminDashboard() {
         }
     }
 
-    const handleApproveReport = async (reportId, correctLabel) => {
-        try {
-            await api.post(`/admin/reports/${reportId}/approve`, {
-                correct_label: correctLabel
-            })
-            toast.success("Case approved and model updated!")
-            fetchDashboardData()
-        } catch (error) {
-            toast.error("Failed to approve report")
-        }
-    }
 
-    const handleRejectReport = async (reportId) => {
-        if (!window.confirm("Reject this report?")) return;
-        try {
-            await api.post(`/admin/reports/${reportId}/reject`)
-            toast.success("Report rejected")
-            fetchDashboardData()
-        } catch (error) {
-            toast.error("Failed to reject report")
-        }
-    }
 
     if (loading) {
         return <div className="flex justify-center p-12"><RefreshCw className="animate-spin text-primary-500" /></div>
@@ -297,7 +276,7 @@ export default function AdminDashboard() {
             )}
 
             {activeTab === 'reports' && (
-                <ReportedCasesList reports={reports} onApprove={handleApproveReport} onReject={handleRejectReport} />
+                <ReportedCasesList reports={reports} />
             )}
         </div>
     )
@@ -324,7 +303,7 @@ const StatsCard = ({ title, value, icon: Icon, color }) => {
     )
 }
 
-const ReportedCasesList = ({ reports, onApprove, onReject }) => {
+const ReportedCasesList = ({ reports }) => {
     if (reports.length === 0) {
         return (
             <div className="text-center py-12 bg-white dark:bg-dark-surface rounded-xl border border-gray-100 dark:border-gray-700">
@@ -338,7 +317,7 @@ const ReportedCasesList = ({ reports, onApprove, onReject }) => {
             {reports.map(report => (
                 <div key={report.id} className="bg-white dark:bg-dark-surface p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex gap-6">
                     <div className="w-48 h-48 flex-shrink-0">
-                        <img
+                        <AuthenticatedImage
                             src={report.image_url}
                             alt="Reported Case"
                             className="w-full h-full object-cover rounded-lg border border-gray-200 dark:border-gray-600"
@@ -364,17 +343,6 @@ const ReportedCasesList = ({ reports, onApprove, onReject }) => {
                                 "{report.description || "No description provided."}"
                             </p>
                         </div>
-
-                        <div className="flex gap-4 pt-2">
-                            <ApproveForm report={report} onApprove={onApprove} />
-
-                            <button
-                                onClick={() => onReject(report.id)}
-                                className="px-4 py-2 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 text-sm font-medium"
-                            >
-                                Reject
-                            </button>
-                        </div>
                     </div>
                 </div>
             ))}
@@ -382,25 +350,40 @@ const ReportedCasesList = ({ reports, onApprove, onReject }) => {
     )
 }
 
-const ApproveForm = ({ report, onApprove }) => {
-    const [label, setLabel] = useState(report.proposed_label || '');
+const AuthenticatedImage = ({ src, alt, className }) => {
+    const [imageSrc, setImageSrc] = useState(null);
+    const [error, setError] = useState(false);
 
-    return (
-        <div className="flex items-center gap-2 flex-1 max-w-md">
-            <input
-                type="text"
-                placeholder="Confirm Class Name..."
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white dark:bg-dark-bg dark:border-gray-600"
-            />
-            <button
-                onClick={() => onApprove(report.id, label)}
-                disabled={!label}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium disabled:opacity-50 whitespace-nowrap"
-            >
-                Approve & Train
-            </button>
-        </div>
-    )
+    useEffect(() => {
+        const fetchImage = async () => {
+            try {
+                // Strip /api/v1 prefix if present because the api instance adds it
+                const endpoint = src.startsWith('/api/v1') ? src.substring(7) : src;
+                const response = await api.get(endpoint, { responseType: 'blob' });
+                const url = URL.createObjectURL(response.data);
+                setImageSrc(url);
+            } catch (err) {
+                console.error("Error loading image:", err);
+                setError(true);
+            }
+        };
+
+        if (src) {
+            fetchImage();
+        }
+
+        return () => {
+            if (imageSrc) URL.revokeObjectURL(imageSrc);
+        };
+    }, [src]);
+
+    if (error) {
+        return <div className={`bg-gray-200 flex items-center justify-center text-gray-500 ${className}`}>Failed to load</div>
+    }
+
+    if (!imageSrc) {
+        return <div className={`bg-gray-100 animate-pulse ${className}`} />;
+    }
+
+    return <img src={imageSrc} alt={alt} className={className} />;
 }
