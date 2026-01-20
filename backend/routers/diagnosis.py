@@ -23,11 +23,11 @@ from backend.models import Prediction, DiseaseHistory
 from backend.auth_utils import get_current_active_user
 from backend.ml_service import ml_service
 from backend.config import settings
-from ml.gradcam import GradCAM
-from ml.encoder import Encoder
-from ml.transforms import inference_transform
-from ml.agro_intelligence import assess_disease_intelligence
-from ml.api_reasoner import generate_ai_advisory, translate_text, translate_batch
+from backend.ml.gradcam import GradCAM
+from backend.ml.encoder import Encoder
+from backend.ml.transforms import inference_transform
+from backend.ml.agro_intelligence import assess_disease_intelligence
+from backend.ml.api_reasoner import generate_ai_advisory, translate_text, translate_batch
 
 router = APIRouter(prefix="/diagnosis", tags=["Disease Diagnosis"])
 
@@ -169,8 +169,32 @@ def generate_gradcam(image_path: str, prototype: torch.Tensor, user_id: int) -> 
     # Generate CAM using prototype similarity
     cam = cam_generator.generate_from_prototype(input_tensor, prototype)
     
+    # --- CENTER BIAS CORRECTION ---
+    # User feedback: Model focuses on surroundings.
+    # Approach: Apply a loose Gaussian center bias to suppress peripheral noise 
+    # without altering the model's core logic.
+    h, w = cam.shape
+    y, x = np.ogrid[:h, :w]
+    center_y, center_x = h / 2, w / 2
+    # Sigma controls the spread (larger = wider focus)
+    sigma = np.sqrt(h**2 + w**2) * 0.45
+    
+    gaussian_mask = np.exp(-((x - center_x)**2 + (y - center_y)**2) / (2 * sigma**2))
+    # Normalize mask (min 0.3 at corners to not completely blind it, max 1.0 at center)
+    gaussian_mask = (gaussian_mask - gaussian_mask.min()) / (gaussian_mask.max() - gaussian_mask.min())
+    bias_mask = gaussian_mask * 0.7 + 0.3
+    
+    cam = cam * bias_mask
+    # -----------------------------
+    
     # Filter background noise (thresholding)
     cam[cam < 0.4] = 0
+    
+    # 1. Clean artifacts at the very edges (often caused by upsampling)
+    cam[0, :] = 0
+    cam[-1, :] = 0
+    cam[:, 0] = 0
+    cam[:, -1] = 0
     
     # Calculate coverage (percentage of image with high activation)
     cam_coverage = float((cam > 0.0).sum() / cam.size)
@@ -179,12 +203,23 @@ def generate_gradcam(image_path: str, prototype: torch.Tensor, user_id: int) -> 
     img_array = np.array(image.resize((224, 224)))
     img_bgr = cv2.cvtColor(img_array, cv2.COLOR_RGB2BGR)
     heatmap = cv2.applyColorMap(np.uint8(255 * cam), cv2.COLORMAP_JET)
-    overlay = cv2.addWeighted(img_bgr, 0.6, heatmap, 0.4, 0)
+    
+    # 2. Transparency Masking: Only verify overlay where cam > 0
+    # Create a broadcastable mask (H, W, 1)
+    mask = (cam > 0).astype(np.float32)[:, :, np.newaxis]
+    
+    # Blend heatmap only in active areas
+    # We use the standard blend for active areas: 0.6 * img + 0.4 * heatmap
+    # And pure image for inactive areas
+    blended_heatmap = cv2.addWeighted(img_bgr, 0.6, heatmap, 0.4, 0)
+    
+    # Combine: (Mask * Blended) + ((1-Mask) * Original)
+    final_output = (mask * blended_heatmap + (1 - mask) * img_bgr).astype(np.uint8)
     
     # Save Grad-CAM
     gradcam_filename = f"{user_id}_{uuid.uuid4()}_gradcam.jpg"
     gradcam_path = os.path.join(settings.GRADCAM_OUTPUT_DIR, gradcam_filename)
-    cv2.imwrite(gradcam_path, overlay)
+    cv2.imwrite(gradcam_path, final_output)
     
     return gradcam_path, cam_coverage
 

@@ -2,8 +2,8 @@ import torch
 import torch.nn.functional as F
 from PIL import Image
 
-from ml.encoder import Encoder
-from ml.transforms import inference_transform
+from backend.ml.encoder import Encoder
+from backend.ml.transforms import inference_transform
 
 
 class PrototypeClassifier:

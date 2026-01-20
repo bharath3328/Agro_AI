@@ -1,8 +1,8 @@
 import torch
 from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader
-from ml.encoder import Encoder
-from ml.transforms import train_transform
+from backend.ml.encoder import Encoder
+from backend.ml.transforms import train_transform
 import os
 
 def compute_prototypes(encoder_path,data_dir,device="cpu"):

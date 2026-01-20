@@ -3,11 +3,11 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-from ml.prototypes import compute_prototypes
+from backend.ml.prototypes import compute_prototypes
 
 def plot_similarity_heatmap():
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    encoder_path = r"ml\encoder_supcon.pth"
+    encoder_path = r"backend\ml\encoder_supcon.pth"
     train_dir = r"data\fewshot\train"
     
     print(f"Loading prototypes from {encoder_path}...")

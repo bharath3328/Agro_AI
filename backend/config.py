@@ -11,7 +11,7 @@ class Settings:
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7
-    ENCODER_PATH: str = os.getenv("ENCODER_PATH", "ml/encoder_supcon.pth")
+    ENCODER_PATH: str = os.getenv("ENCODER_PATH", "backend/ml/encoder_supcon.pth")
     TRAIN_DATA_DIR: str = os.getenv("TRAIN_DATA_DIR", "data/fewshot/train")
     OPEN_SET_THRESHOLD: Optional[float] = None
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "data/processed")

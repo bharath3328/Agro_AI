@@ -1,10 +1,10 @@
 import torch
 import os
 from typing import Dict, Tuple
-from ml.encoder import Encoder
-from ml.classifier import PrototypeClassifier
-from ml.prototypes import compute_prototypes
-from ml.threshold import compute_open_set_threshold
+from backend.ml.encoder import Encoder
+from backend.ml.classifier import PrototypeClassifier
+from backend.ml.prototypes import compute_prototypes
+from backend.ml.threshold import compute_open_set_threshold
 from backend.config import settings
 
 class MLService:

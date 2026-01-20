@@ -1,9 +1,9 @@
 import torch
 import torch.nn.functional as F
 from torchvision.datasets import ImageFolder
-from ml.encoder import Encoder
-from ml.prototypes import compute_prototypes
-from ml.transforms import train_transform
+from backend.ml.encoder import Encoder
+from backend.ml.prototypes import compute_prototypes
+from backend.ml.transforms import train_transform
 
 def compute_open_set_threshold(encoder_path,train_dir,device="cpu",percentile=0.5):
     model = Encoder()

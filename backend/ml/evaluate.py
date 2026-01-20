@@ -1,8 +1,8 @@
 import torch
 from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader
-from ml.prototypes import compute_prototypes
-from ml.classifier import PrototypeClassifier
+from backend.ml.prototypes import compute_prototypes
+from backend.ml.classifier import PrototypeClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,7 +11,7 @@ import os
 def evaluate_model():
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    encoder_path = r"ml\encoder_supcon.pth"
+    encoder_path = r"backend\ml\encoder_supcon.pth"
     train_dir = r"data\fewshot\train"
     test_dir = r"data\fewshot\test"
 

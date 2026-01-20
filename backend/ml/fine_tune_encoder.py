@@ -8,15 +8,15 @@ import sys
 import os
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(current_dir)
+project_root = os.path.dirname(os.path.dirname(current_dir))
 sys.path.append(project_root)
 
 from backend.config import settings
-from ml.encoder import Encoder
-from ml.transforms import train_transform
-from ml.prototypes import compute_prototypes
-from ml.threshold import compute_open_set_threshold
-from ml.loss import SupConLoss
+from backend.ml.encoder import Encoder
+from backend.ml.transforms import train_transform
+from backend.ml.prototypes import compute_prototypes
+from backend.ml.threshold import compute_open_set_threshold
+from backend.ml.loss import SupConLoss
 
 def fine_tune():
     print("Starting Supervised Contrastive Fine-Tuning (SupCon)...")

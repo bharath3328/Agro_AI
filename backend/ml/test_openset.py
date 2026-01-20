@@ -1,17 +1,17 @@
 import torch
 import torch.nn.functional as F
-from ml.encoder import Encoder
-from ml.prototypes import compute_prototypes
+from backend.ml.encoder import Encoder
+from backend.ml.prototypes import compute_prototypes
 from torchvision import transforms
 from PIL import Image
 import os
 
 def test_openset():
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    encoder_path = r"ml\encoder_supcon.pth"
+    encoder_path = r"backend\ml\encoder_supcon.pth"
     train_dir = r"data\fewshot\train"
 
-    from ml.threshold import compute_open_set_threshold
+    from backend.ml.threshold import compute_open_set_threshold
     threshold = compute_open_set_threshold(encoder_path, train_dir, device=device)
     print(f"Computed Threshold: {threshold:.4f}")
     
